@@ -8,77 +8,65 @@
 #include "example-mbedos-blinky/serial_driver.h"
 #include "example-mbedos-blinky/modem_driver.h"
 
-// ----------------------------------------------------------------
-// COMPILE-TIME CONSTANTS
-// ----------------------------------------------------------------
-
-// At the end of all AT strings there is a...
-#define AT_TERMINATOR "\r\n"
-
-// Wait between polling the NB-IoT module AT interface
-#define AT_RX_POLL_TIMER_MS 100
-
-// OK
-#define AT_OK "OK\r\n"
-
-// ERROR
-#define AT_ERROR "ERROR\r\n"
+#define AT_TERMINATOR        "\r\n"
+#define AT_RX_POLL_TIMER_MS  100
+#define AT_OK                "OK\r\n"
+#define AT_ERROR             "ERROR\r\n"
 
 Timer timer;
-// ----------------------------------------------------------------
-// PROTECTED FUNCTIONS
-// ----------------------------------------------------------------
 
 
 
-// variadicFunction
+// (1) Send a string, printf()-style to the serial port
 bool Nbiot::sendPrintf(const char * pFormat, ...)
 {
 	bool success = false;
     va_list args;
     uint32_t len = 0;
 
-    if (gInitialised)
-    {
+    if (gInitialised){
         va_start(args, pFormat);
         len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
         va_end(args);
         success = gpSerialPort->transmitBuffer((const char *) gTxBuf, len);
+        printf("TX %d: %s", len, (char *) gTxBuf);
     }
     return success;
 }
 
+
+// (2)
+// Check the modem interface for received characters, copying each one into
+// pBuf.  If an AT_TERMINATOR is found, or lenBuf characters have been
+// received, return the number of characters (including the AT_TERMINATOR),
+// otherwise return 0.  No NULL terminator is added to pBuf.
 // Get characters (up to lenBuf of them) from the NB-IoT module into pBuf.
 // If an AT terminator is found, or lenBuf characters have been read,
 // return a count of the number of characters (including the AT terminator),
 // otherwise return 0.
+
 uint32_t Nbiot::getLine(char * pBuf, uint32_t lenBuf)
 {
     int32_t x;
     uint32_t returnLen = 0;
-    if (gInitialised)
-    {
-        if (gLenRx < lenBuf)
-        {
+
+    if (gInitialised){
+        if (gLenRx < lenBuf){
             do{
                 x = gpSerialPort->receiveChar();
-                // If something was received, add it to the buffer
-                // and check if a terminator has landed
                 if (x >= 0)
                 {
                     *(pBuf + gLenRx) = (char) x;
                     gLenRx++;
-                    
-                    if (x == AT_TERMINATOR[gMatched])
-                    {
+                    if (x == AT_TERMINATOR[gMatched]){
                         gMatched++;
+                        //printf("144 %d %d %d %d %d\r\n", gLenRx, lenBuf, (int)x, (int)gMatched, sizeof(AT_TERMINATOR) - 1);
                     }
-                    else
-                    {
+                    else{
                         gMatched = 0;
                     }
                 }
-            } while ((x >= 0) && (gLenRx < lenBuf) && (gMatched < sizeof(AT_TERMINATOR) - 1));        
+            } while ((x >= 0) && (gLenRx < lenBuf) && (gMatched < sizeof(AT_TERMINATOR) - 1));
         }
         
         if ((gMatched == sizeof(AT_TERMINATOR) - 1) || (gLenRx == lenBuf)) // -1 to omit 0 of string
@@ -90,14 +78,13 @@ uint32_t Nbiot::getLine(char * pBuf, uint32_t lenBuf)
             gMatched = 0;
         }    
     }
-
     return returnLen;
 }
 
 
 
-
-
+// (3)
+// Tick along the process of receiving characters from the modem AT interface.
 // Callback to handle AT stuff received from the NBIoT module
 void Nbiot::rxTick()
 {
@@ -105,25 +92,32 @@ void Nbiot::rxTick()
 
     if (len > sizeof(AT_TERMINATOR) - 1) // -1 to omit NULL terminator
     {
-        printf ("[modem->rxTick]  RxTick received %d characters from module: \"%.*s\".\r\n", (int) (len - (sizeof(AT_TERMINATOR) - 1)), (int) (len - (sizeof(AT_TERMINATOR) - 1)), gRxBuf);
+        printf ("RX %d: \"%.*s\".\r\n", (int) (len - (sizeof(AT_TERMINATOR) - 1)), (int) (len - (sizeof(AT_TERMINATOR) - 1)), gRxBuf);
         if (gpResponse == NULL)
         {
-           gLenResponse = len;
-           gpResponse = gRxBuf;
+            gLenResponse = len;
+            gpResponse = gRxBuf;
         }
     }
 }
 
 
-
-
-
-
+// (4)
+// Wait for a response from the modem, used during transmit operations.
+// If pExpected is not NULL, AtResponse will indicate if the received string
+// starts with the characters at pExpected (which must be a NULL terminated
+// string), otherwise it will indicate if the standard strings "OK" and
+// "ERROR" have been received, otherwise it will indicate that something
+// other has been received. Up to responseBufLen received characters are
+// stored at pResponseBuf and a NULL terminator is added.  The number of
+// includes the AT terminator (AT_TERMINATOR).  Any characters over responseBufLen
+// are discarded.
 // Wait for an AT response.  If pExpected is not NULL and the
 // AT response string begins with this string then say so, else
 // wait for the standard "OK" or "ERROR" responses for a little
 // while, else time out. The response string is copied into
 // gpResponse if it is non-NULL (and a null terminator is added).
+
 Nbiot::AtResponse Nbiot::waitResponse(
 		const char  *pExpected        /*NULL*/,
 		time_t       timeoutSeconds   /*DEFAULT_RESPONSE_TIMEOUT_SECONDS*/,
@@ -131,18 +125,18 @@ Nbiot::AtResponse Nbiot::waitResponse(
 		uint32_t     responseBufLen   /*0*/)
 {
 	AtResponse response = AT_RESPONSE_NONE;
+
 	timer.reset();
 	timer.start();
 
-    if (gpResponse != NULL)
-    {
-        printf ("[modem->waitResponse]  ERROR: response from module not cleared from last time.\r\n");
+    if (gpResponse != NULL){
+        printf ("ERROR: response from module not cleared from last time.\r\n");
         gpResponse = NULL;
     }
+
     do {
         rxTick();
-        if (gpResponse != NULL)
-        {
+        if (gpResponse != NULL){
             // Got a line, process it
             if ((strncmp(gpResponse, AT_OK, gLenResponse) == 0) && (gLenResponse == (sizeof (AT_OK) - 1))) // -1 to omit 0 of string
             {
@@ -182,44 +176,26 @@ Nbiot::AtResponse Nbiot::waitResponse(
             wait_ms(AT_RX_POLL_TIMER_MS);
         }
     } while ( (response == AT_RESPONSE_NONE) && ((timeoutSeconds == 0) || (timer.read() < timeoutSeconds)) );
-
     // Reset response pointer for next time
     gpResponse = NULL;
     return response;
 }
 
 
-
-
-
-void Nbiot::charToTchar(const char *pIn, char *pOut, uint32_t size)
-{
-	//printf ("[modem->charToTchar]\r\n");
-    memset (pOut, 0, size);
-#ifdef _MSC_VER
-    uint32_t size_needed = MultiByteToWideChar(CP_UTF8, 0, pIn, (int)strlen(pIn), NULL, 0);
-    if (size_needed > size)
-    {
-        size_needed = size;
-    }
-    MultiByteToWideChar(CP_UTF8, 0, pIn, (int)strlen(pIn), pOut, size_needed);
-#else
-    strncpy(pOut, pIn, size);
-#endif
-}
-
-
-
-// ----------------------------------------------------------------
-// PUBLIC FUNCTIONS
-// ----------------------------------------------------------------
-
-
-
-// Constructor
+// (5)
+// Constructor.  pPortname is a string that defines the serial port where the
+// NB-IoT modem is connected.  On Windows the form of a properly escaped string
+// must be as follows:
+//
+// "\\\\.\\COMx"
+//
+// ...where x is replaced by the COM port number.  So, for COM17, the string
+// would be:
+//
+// "\\\\.\\COM17"
 Nbiot::Nbiot(const char * pPortname)
 {
-	printf ("[modem->Constructor]\r\n");
+	//printf ("[modem->Constructor]\r\n");
     gpResponse   = NULL;
     gpSerialPort = NULL;
     gLenResponse = 0;
@@ -230,184 +206,134 @@ Nbiot::Nbiot(const char * pPortname)
     gpSerialPort = new SerialPort();
     if (gpSerialPort)
     {
-        if (gpSerialPort->connect(pPortname))
-        {
-            printf ("[modem->Constructor]  connected to %s.\r\n", pPortname);
+            //printf ("[modem->Constructor]  connected to %s.\r\n", pPortname);
             gInitialised = true;
-            // Flush out any initialisation messages from the modem
-            //waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
-        }
-        else
-        {
-            delete gpSerialPort;
-            printf ("[modem->Constructor]  unable to connect to port %s. \r\n", pPortname);
-        }
+            waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
     }
 }
 
-
+// (6)
 Nbiot::~Nbiot (){
 	delete (gpSerialPort);
 }
 
+// (7)
+// Connect to the NB-IoT network with optional timeoutSeconds.  If usingSoftRadio
+// is true then the connect behaviour is matched to that of SoftRadio, otherwise
+// it is matched to that of a real radio.  If timeoutSeconds is zero this function
+// will block indefinitely until a connection has been achieved.
 
-
-// Connect to the network
-bool Nbiot::connect(bool usingSoftRadio, time_t timeoutSeconds)
+bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/)
 {
     bool success = false;
     AtResponse response;
 
     timer.reset();
     timer.start();
-
-    if (gInitialised)
-    {
-        if (timeoutSeconds > 0)
-        {
-            printf ("Checking for connection to network for up to %d seconds...\r\n", (int) timeoutSeconds);
-        }
-        else
-        {
-            printf ("Checking for connection to network...\r\n");
-        }
-
+    if (gInitialised){
         do {
             if (usingSoftRadio){
-                // Check for service at radio level (as SoftRadio
-                // does not support AT+NAS)
                 sendPrintf("AT+RAS%s", AT_TERMINATOR);
                 response = waitResponse("+RAS:CONNECTED\r\n");
             }
             else{
-                // First check for service using +NAS.
                 sendPrintf("AT+NAS%s", AT_TERMINATOR);
                 response = waitResponse("+NAS: Connected (activated)\r\n");
             }
 
 
-
-            if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
-            {
-                // It worked, but need to also wait for the "OK"
+            if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
                 waitResponse();
-                printf ("Connected to network, setting AT+SMI to 1.\r\n");
-
-                // Set AT+SMI to be 1
+                printf ("Connected to network!\r\n");
                 sendPrintf("AT+SMI=1%s", AT_TERMINATOR);
                 response = waitResponse("+SMI:OK\r\n");
-                if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
-                {
-                    // Absorb the trailing OK.
+                if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
                     waitResponse();
-
-                    // All done
                     success = true;
-                    printf ("AT+SMI set to 1.\r\n");
+                    printf ("All done!\r\n");
                 }
-
-                // Here we could set up AT+NMI to be 2 and receive
-                // datagrams asynchronously based on +NMI notifications
-                // from the module but this simple example is kept 
-                // deliberately kept single-threaded and so it instead
-                // polls the modem with AT+MGR for downlink messages between
-                // uplink message transmissions.
             }
-            else
-            {
-
-#ifdef YOTTA_CFG_MBED_OS
+            else{
                 wait_ms(1000);
-#else
-                Sleep((timeoutSeconds * 1000) / 10);
-#endif
-
             }
         } while ((!success) && ((timeoutSeconds == 0) || (timer.read() < timeoutSeconds)));
     }
-
     return success;
 }
 
 
 
-
-
-// Send a message to the network
-bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
+// (8)
+// Send the contents of the buffer pMsg, length msgSize, to the NB-IoT network with
+// optional timeoutSeconds, waiting for confirmation that the message has been sent.
+// If timeoutSeconds is zero this function will block indefinitely until the message
+// has been sent.
+bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds /*5sec*/)
 {
     bool success = false;
     AtResponse response;
     uint32_t   charCount = 0;
 
-    // Check that the incoming message, when hex coded (so * 2) is not too big
     if ((msgSize * 2) <= sizeof(gHexBuf))
     {
         charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
+
         printf("[modem->send]  sending datagram to network, %d characters: %.*s\r\n", (int) msgSize, pMsg);
+
         sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
 
-        // Wait for confirmation
         response = waitResponse("+MGS:OK\r\n");
         if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
         {
-            // It worked, wait for the "OK"
             waitResponse();
-            // Now wait for the SENT indication
             response = waitResponse("+SMI:SENT\r\n", timeoutSeconds);
             if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
             {
-                // All done
                 success = true;
-                printf ("[modem->send]  modem reports datagram SENT.\r\n");
+                printf ("All done SENT.\r\n");
             }
         }
     }
     else
     {
-        printf ("[modem->send]  datagram is too long (%d characters when only %d bytes can be sent).\r\n", msgSize, (int) (sizeof (gHexBuf) / 2));
+        printf ("Datagram is too long (%d characters when only %d bytes can be sent).\r\n", msgSize, (int) (sizeof (gHexBuf) / 2));
     }
     return success;
 }
 
 
 
-
-// Receive a message from the network
-uint32_t Nbiot::receive (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
+// (9)
+// Poll the NB-IoT modem for received data with optional timeoutSeconds.  If data
+// has been received the return value will be non-zero, representing the number of
+// bytes received.  Up to msgSize bytes of returned data will be stored at pMsg; any
+// data beyond that will be lost.  If timeoutSeconds is zero this function will block
+// indefinitely until a message has been received.
+uint32_t Nbiot::receive (char * pMsg, uint32_t msgSize, time_t timeoutSeconds /*5sec*/)
 {
-	printf ("[modem->receive]\r\n");
     int bytesReceived = 0;
     AtResponse response;
-    char * pHexStart = NULL;
-    char * pHexEnd = NULL;
+    char *pHexStart = NULL;
+    char *pHexEnd = NULL;
 
-    printf("[modem->receive] receiving a datagram of up to %d byte(s) from the network...\r\n", msgSize);
+    printf("%d bytes received.\r\n", msgSize);
     sendPrintf("AT+MGR%s", AT_TERMINATOR);
-
     response = waitResponse("+MGR:", timeoutSeconds, gHexBuf, sizeof (gHexBuf));
 
-    if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
-    {
-        if (sscanf(gHexBuf, " +MGR:%d,", &bytesReceived) == 1) // The space in the string is significant,
-                                                               // it allows any whitespace characters in the input string
-        {
+    if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
+        if (sscanf(gHexBuf, " +MGR:%d,", &bytesReceived) == 1) {
             pHexStart = strchr (gHexBuf, ',');
-            if (pHexStart != NULL)
-            {
+            if (pHexStart != NULL){
                 pHexStart++;
                 pHexEnd = strstr (pHexStart, AT_TERMINATOR);
-                if ((pHexEnd != NULL) && (pMsg != NULL))
-                {
+                if ((pHexEnd != NULL) && (pMsg != NULL)){
                     hexStringToBytes (pHexStart, pHexEnd - pHexStart, pMsg, msgSize);
                 }
             }
-
-            // Wait for the OK at the end
             response = waitResponse("+MGR:OK\r\n");
         }
     }
     return (uint32_t) bytesReceived;
 }
 
-// End Of File
+// HamedSiasi

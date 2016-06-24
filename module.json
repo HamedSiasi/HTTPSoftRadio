@@ -18,9 +18,7 @@
     }
   ],
   "dependencies": {
-    "mbed-drivers": "u-blox/mbed-drivers#v1.5.1",
-    "mbed-client-c": "^2.6.0",
-    "nanostack-libservice": "^3.5.3"
+    "mbed-drivers": "u-blox/mbed-drivers#v1.5.1"
   },
   "targetDependencies": {},
   "bin": "./source"
