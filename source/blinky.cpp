@@ -17,7 +17,7 @@
 
 #include "mbed-drivers/mbed.h"
 #include "example-mbedos-blinky/HTTPClient.h"
-//#include "HTTPClient.h"
+
 
 /*
 static bool modem(char *datagram, uint32_t datagramLen){

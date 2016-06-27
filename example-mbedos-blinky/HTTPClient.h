@@ -30,9 +30,8 @@ class HTTPData;
 #include "IHTTPData.h"
 #include "mbed.h"
 
-///HTTP client results
-enum HTTPResult
-{
+
+enum HTTPResult {
   HTTP_PROCESSING, ///<Processing
   HTTP_PARSE, ///<url Parse error
   HTTP_DNS, ///<Could not resolve name
@@ -46,13 +45,10 @@ enum HTTPResult
   HTTP_OK = 0, ///<Success
 };
 
-/**A simple HTTP Client
-The HTTPClient is composed of:
-- The actual client (HTTPClient)
-- Classes that act as a data repository, each of which deriving from the HTTPData class (HTTPText for short text content, HTTPFile for file I/O, HTTPMap for key/value pairs, and HTTPStream for streaming purposes)
-*/
-class HTTPClient
-{
+
+
+
+class HTTPClient {
 public:
   ///Instantiate the HTTP client
   HTTPClient();
@@ -68,6 +64,7 @@ public:
   void basicAuth(const char* user, const char* password); //Basic Authentification
 #endif
 
+
   //High Level setup functions
   /** Execute a GET request on the URL
   Blocks until completion
@@ -77,6 +74,7 @@ public:
   @return 0 on success, HTTP error (<0) on failure
   */
   HTTPResult get(const char* url, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
+
 
   /** Execute a GET request on the URL
   Blocks until completion
@@ -89,6 +87,7 @@ public:
   */
   HTTPResult get(const char* url, char* result, size_t maxResultLen, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
+
   /** Execute a POST request on the URL
   Blocks until completion
   @param url : url on which to execute the request
@@ -98,6 +97,7 @@ public:
   @return 0 on success, HTTP error (<0) on failure
   */
   HTTPResult post(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
+
 
   /** Execute a PUT request on the URL
   Blocks until completion
@@ -109,6 +109,7 @@ public:
   */
   HTTPResult put(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
+
   /** Execute a DELETE request on the URL
   Blocks until completion
   @param url : url on which to execute the request
@@ -118,10 +119,12 @@ public:
   */
   HTTPResult del(const char* url, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
+
   /** Get last request's HTTP response code
   @return The HTTP response code of the last request
   */
   int getHTTPResponseCode();
+
 
 private:
   enum HTTP_METH
@@ -138,11 +141,7 @@ private:
   HTTPResult send(char* buf, size_t len = 0); //0 on success, err code on failure
   HTTPResult parseURL(const char* url, char* scheme, size_t maxSchemeLen, char* host, size_t maxHostLen, uint16_t* port, char* path, size_t maxPathLen); //Parse URL
 
-  //Parameters
-  //TCPSocketConnection m_sock;
-
   int m_timeout;
-
   const char* m_basicAuthUser;
   const char* m_basicAuthPassword;
   int m_httpResponseCode;
