@@ -16,13 +16,9 @@
  */
 
 #include "mbed-drivers/mbed.h"
-#include "example-mbedos-blinky/modem_driver.h"
+#include "example-mbedos-blinky/HTTPClient.h"
 
-
-//static uint8_t*  gMsgPacket;
-//static uint32_t  gMsgPacketSize;
-
-
+/*
 static bool modem(char *datagram, uint32_t datagramLen){
 	bool status = false;
 	bool usingSoftRadio = true;
@@ -55,25 +51,63 @@ static bool modem(char *datagram, uint32_t datagramLen){
 	}
 	delete (pModem);
 	return status;
+}*/
+
+
+
+static void get(void) {
+	printf("Connecting...\n");
+	HTTPClient http;
+	char str[512];
+    // --- GET data ---
+    printf("Trying to fetch page...\n");
+    int ret = http.get("http://mbed.org/media/uploads/donatien/hello.txt", str, 128);
+    if (!ret)
+    {
+      printf("Page fetched successfully - read %d characters\n", strlen(str));
+      printf("Result: %s\n", str);
+    }
+    else
+    {
+      printf("Error - ret = %d - HTTP return code = %d\n", ret, http.getHTTPResponseCode());
+    }
 }
 
 
+/*
+static void post(void) {
+	printf("Connecting...\n");
+	HTTPClient http;
+	char str[512];
+	//--- POST data ---
+	HTTPMap map;
+	HTTPText text(str, 512);
+    map.put("Hello", "World");
+    map.put("test", "1234");
+    printf("Trying to post data...\n");
+    int ret = http.post("http://httpbin.org/post", map, &text);
+    if (!ret)
+    {
+      printf("Executed POST successfully - read %d characters\n", strlen(str));
+      printf("Result: %s\n", str);
+	}
+    else
+    {
+      printf("Error - ret = %d - HTTP return code = %d\n", ret, http.getHTTPResponseCode());
+    }
+}*/
 
-static void blinky(void) {
-    static DigitalOut led(LED1);
-    led = !led;
-    printf("LED = %d \n\r",led.read());
-}
 
 static void msgTest(void) {
 	char *str = "HELLO";
 	size_t strLen = strlen(str);
-	modem( str, (uint32_t)strLen);
+	//modem( str, (uint32_t)strLen);
 }
 
 
 void app_start(int, char**){
-    minar::Scheduler::postCallback(msgTest).period(minar::milliseconds(5000));
+    //minar::Scheduler::postCallback(msgTest).period(minar::milliseconds(5000));
+	minar::Scheduler::postCallback(get).period(minar::milliseconds(10000));
 }
 
 
