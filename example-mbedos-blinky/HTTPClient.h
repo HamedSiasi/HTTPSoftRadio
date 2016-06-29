@@ -29,6 +29,7 @@ class HTTPData;
 
 #include "IHTTPData.h"
 #include "mbed.h"
+#include "example-mbedos-blinky/modem_driver.h"
 
 
 enum HTTPResult {
@@ -50,7 +51,6 @@ enum HTTPResult {
 
 class HTTPClient {
 public:
-  ///Instantiate the HTTP client
   HTTPClient();
   ~HTTPClient();
 
@@ -125,6 +125,8 @@ public:
   */
   int getHTTPResponseCode();
 
+protected:
+  Nbiot *pModem = NULL;
 
 private:
   enum HTTP_METH
@@ -145,11 +147,8 @@ private:
   const char* m_basicAuthUser;
   const char* m_basicAuthPassword;
   int m_httpResponseCode;
-
 };
 
-//Including data containers here for more convenience
 #include "HTTPText.h"
 #include "HTTPMap.h"
-
 #endif

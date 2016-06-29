@@ -29,7 +29,7 @@ bool Nbiot::sendPrintf(const char * pFormat, ...)
         len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
         va_end(args);
         success = gpSerialPort->transmitBuffer((const char *) gTxBuf, len);
-        printf("TX %d: %s", len, (char *) gTxBuf);
+        printf("TX %d: %s \r\n", len, (char *) gTxBuf);
     }
     return success;
 }
@@ -164,7 +164,7 @@ Nbiot::AtResponse Nbiot::waitResponse(
             {
                 if (pExpected != NULL)
                 {
-                    printf ("[modem->waitResponse]  WARNING: unexpected response from module.\n");
+                    printf ("[modem->waitResponse]  WARNING: unexpected response from module.\r\n");
                     printf ("[modem->waitResponse]  Expected: %s... Received: %.*s \r\n", pExpected, (int) gLenResponse, gpResponse);
                 }
                 // Reset response pointer
@@ -195,7 +195,6 @@ Nbiot::AtResponse Nbiot::waitResponse(
 // "\\\\.\\COM17"
 Nbiot::Nbiot(const char * pPortname)
 {
-	//printf ("[modem->Constructor]\r\n");
     gpResponse   = NULL;
     gpSerialPort = NULL;
     gLenResponse = 0;

@@ -14,7 +14,9 @@ SerialPort::SerialPort(
 		PinName rx     /*UART1_RX*/,
 		int baudrate   /*9600*/)
 {
+	printf("51\r\n");
 	pgUart = new Serial(tx, rx);
+	printf("52\r\n");
 	pgUart->baud(baudrate);
 	pgUart->format(8, SerialBase::None, 1);
 }

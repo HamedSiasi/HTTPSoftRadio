@@ -1,3 +1,4 @@
+
 /*
  * PackageLicenseDeclared: Apache-2.0
  * Copyright (c) 2015 ARM Limited
@@ -18,6 +19,34 @@
 #include "mbed-drivers/mbed.h"
 #include "example-mbedos-blinky/HTTPClient.h"
 
+//#define DEBUG
+
+static HTTPClient *http = NULL;
+
+#ifdef DEBUG
+static bool checkHeap(int bytes){
+	bool retval = false;
+	char *p = NULL;
+	p = (char*)malloc(bytes);
+	if(p){
+		retval = true;
+	}
+	free(p);
+	return retval;
+}
+static void checkStack(void){
+	unsigned int counter = 1;
+	while(true)
+	{
+		char array[counter];
+		array[counter-1] = 7;
+		printf("%d KB\r\n",counter);
+		counter++;
+		wait(0.1);
+	}
+	//never arrive here
+}
+#endif
 
 /*
 static bool modem(char *datagram, uint32_t datagramLen){
@@ -55,49 +84,48 @@ static bool modem(char *datagram, uint32_t datagramLen){
 }*/
 
 
-
 static void get(void) {
-	printf("Connecting...\n");
-	HTTPClient http;
-	char str[512];
+	char str[64]; //512
+
     // --- GET data ---
-    printf("Trying to fetch page...\n");
-    int ret = http.get("http://mbed.org/media/uploads/donatien/hello.txt", str, 128);
+	http = new HTTPClient();
+
+    printf("Trying to fetch page... \r\n");
+    int ret = http->get("http://mbed.org/media/uploads/donatien/hello.txt", str, 128);
     if (!ret)
     {
-      printf("Page fetched successfully - read %d characters\n", strlen(str));
-      printf("Result: %s\n", str);
+      printf("Page fetched successfully - read %d characters \r\n", strlen(str));
+      printf("Result: %s \r\n", str);
     }
     else
     {
-      printf("Error - ret = %d - HTTP return code = %d\n", ret, http.getHTTPResponseCode());
+      printf("Error - ret = %d - HTTP return code = %d \r\n", ret, http->getHTTPResponseCode());
     }
 }
 
-
 /*
 static void post(void) {
-	printf("Connecting...\n");
+	printf("Connecting...\r\n");
 	HTTPClient http;
-	char str[512];
+	char str[32]; // 512
+
 	//--- POST data ---
 	HTTPMap map;
 	HTTPText text(str, 512);
     map.put("Hello", "World");
     map.put("test", "1234");
-    printf("Trying to post data...\n");
+    printf("Trying to post data... \r\n");
     int ret = http.post("http://httpbin.org/post", map, &text);
     if (!ret)
     {
-      printf("Executed POST successfully - read %d characters\n", strlen(str));
+      printf("Executed POST successfully - read %d characters \r\n", strlen(str));
       printf("Result: %s\n", str);
 	}
     else
     {
-      printf("Error - ret = %d - HTTP return code = %d\n", ret, http.getHTTPResponseCode());
+      printf("Error - ret = %d - HTTP return code = %d \r\n", ret, http.getHTTPResponseCode());
     }
 }*/
-
 
 static void msgTest(void) {
 	char *str = "HELLO";
@@ -105,11 +133,22 @@ static void msgTest(void) {
 	//modem( str, (uint32_t)strLen);
 }
 
-
-void app_start(int, char**){
-    //minar::Scheduler::postCallback(msgTest).period(minar::milliseconds(5000));
-	minar::Scheduler::postCallback(get).period(minar::milliseconds(10000));
+static void blinky(void) {
+    static DigitalOut led(LED1);
+    led = !led;
+    printf("LED = %d \n\r",led.read());
 }
+
+
+
+
+void app_start(int, char**)
+{
+    //minar::Scheduler::postCallback(blinky).period(minar::milliseconds(2000));
+    minar::Scheduler::postCallback(get).period(minar::milliseconds(3000));
+}
+
+
 
 
 

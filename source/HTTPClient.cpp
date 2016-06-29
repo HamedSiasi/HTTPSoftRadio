@@ -42,19 +42,25 @@
 
 #include <cstring>
 #include "example-mbedos-blinky/HTTPClient.h"
-#include "example-mbedos-blinky/modem_driver.h"
 
 
 HTTPClient::HTTPClient() :
-m_basicAuthUser(NULL), m_basicAuthPassword(NULL), m_httpResponseCode(0)
+m_basicAuthUser(NULL),
+m_basicAuthPassword(NULL),
+m_httpResponseCode(0)
 {
-	// Creat static pModem???
+	printf("2\r\n");
+	pModem = new Nbiot();
+	printf("3\r\n");
+	if(!pModem){
+	  	 ERR("Out of Memory !!!\r\n");
+	}
 }
 
 
 HTTPClient::~HTTPClient()
 {
-
+	delete(pModem);
 }
 
 
@@ -73,37 +79,31 @@ HTTPResult HTTPClient::get(const char* url, IHTTPDataIn* pDataIn, int timeout /*
   return connect(url, HTTP_GET, NULL, pDataIn, timeout);
 }
 
-
 HTTPResult HTTPClient::get(const char* url, char* result, size_t maxResultLen, int timeout /*= HTTP_CLIENT_DEFAULT_TIMEOUT*/) //Blocking
 {
   HTTPText str(result, maxResultLen);
   return get(url, &str, timeout);
 }
 
-
 HTTPResult HTTPClient::post(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout /*= HTTP_CLIENT_DEFAULT_TIMEOUT*/) //Blocking
 {
   return connect(url, HTTP_POST, (IHTTPDataOut*)&dataOut, pDataIn, timeout);
 }
-
 
 HTTPResult HTTPClient::put(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout /*= HTTP_CLIENT_DEFAULT_TIMEOUT*/) //Blocking
 {
   return connect(url, HTTP_PUT, (IHTTPDataOut*)&dataOut, pDataIn, timeout);
 }
 
-
 HTTPResult HTTPClient::del(const char* url, IHTTPDataIn* pDataIn, int timeout /*= HTTP_CLIENT_DEFAULT_TIMEOUT*/) //Blocking
 {
   return connect(url, HTTP_DELETE, NULL, pDataIn, timeout);
 }
 
-
 int HTTPClient::getHTTPResponseCode()
 {
   return m_httpResponseCode;
 }
-
 
 #define CHECK_CONN_ERR(ret) \
   do{ \
@@ -120,9 +120,10 @@ int HTTPClient::getHTTPResponseCode()
   } while(0)
 
 
+
 HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* pDataOut, IHTTPDataIn* pDataIn, int timeout) //Execute request
 {
-  m_httpResponseCode = 0; //Invalidate code
+  m_httpResponseCode = 0;
   m_timeout = timeout;
 
   pDataIn->writeReset();
@@ -273,7 +274,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   if( (m_httpResponseCode < 200) || (m_httpResponseCode >= 300) )
   {
     //Did not return a 2xx code; TODO fetch headers/(&data?) anyway and implement a mean of writing/reading headers
-    WARN("Response code %d", m_httpResponseCode);
+    WARN("Response code %d ", m_httpResponseCode);
     PRTCL_ERR();
   }
 
@@ -474,6 +475,9 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   return HTTP_OK;
 }
 
+
+
+
 HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pReadLen) //0 on success, err code on failure
 {
   DBG("Trying to read between %d and %d bytes", minLen, maxLen);
@@ -481,11 +485,7 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
 
   bool status = false;
   bool usingSoftRadio = true;
-  Nbiot *pModem = NULL;
-  if( !(pModem = new Nbiot()) ){
-  	 ERR("Out of Memory !!!\r\n");
-  	 return HTTP_CLOSED;
-  }
+
 
   int ret;
   while(readLen < maxLen)
@@ -542,18 +542,11 @@ HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, err code on f
   DBG("Trying to write %d bytes", len);
   size_t writtenLen = 0;
 
-
   bool status = false;
   bool usingSoftRadio = true;
-  Nbiot *pModem = NULL;
-  if( !(pModem = new Nbiot()) ){
-	  ERR("Out of Memory !!!\r\n");
-	  return HTTP_CLOSED;
-  }
-  else{
-	  status = pModem->connect(usingSoftRadio);
-	  if (status)
-	  {
+
+  status = pModem->connect(usingSoftRadio);
+  if (status){
 		  int ret = pModem->send ( buf, (uint32_t)len);
 		  if(ret > 0)
 		  {
@@ -561,7 +554,7 @@ HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, err code on f
 		  }
 		  else if( ret == 0 )
 		  {
-		      WARN("Connection was closed by server");
+		      WARN("Connection was closed by server ");
 		      return HTTP_CLOSED; //Connection was closed by server
 		  }
 		  else
@@ -572,11 +565,6 @@ HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, err code on f
 		  DBG("Written %d bytes", writtenLen);
 		  return HTTP_OK;
 	  }
-	  else{
-		  WARN("Connection was closed");
-		  return HTTP_CLOSED;
-	  }
-  }
 }
 
 HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeLen, char* host, size_t maxHostLen, uint16_t* port, char* path, size_t maxPathLen) //Parse URL
