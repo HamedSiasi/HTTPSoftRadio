@@ -34,16 +34,16 @@ class HTTPData;
 
 enum HTTPResult {
   HTTP_PROCESSING, ///<Processing
-  HTTP_PARSE, ///<url Parse error
-  HTTP_DNS, ///<Could not resolve name
-  HTTP_PRTCL, ///<Protocol error
-  HTTP_NOTFOUND, ///<HTTP 404 Error
-  HTTP_REFUSED, ///<HTTP 403 Error
-  HTTP_ERROR, ///<HTTP xxx error
-  HTTP_TIMEOUT, ///<Connection timeout
-  HTTP_CONN, ///<Connection error
-  HTTP_CLOSED, ///<Connection was closed by remote host
-  HTTP_OK = 0, ///<Success
+  HTTP_PARSE,      ///<url Parse error
+  HTTP_DNS,        ///<Could not resolve name
+  HTTP_PRTCL,      ///<Protocol error
+  HTTP_NOTFOUND,   ///<HTTP 404 Error
+  HTTP_REFUSED,    ///<HTTP 403 Error
+  HTTP_ERROR,      ///<HTTP xxx error
+  HTTP_TIMEOUT,    ///<Connection timeout
+  HTTP_CONN,       ///<Connection error
+  HTTP_CLOSED,     ///<Connection was closed by remote host
+  HTTP_OK = 0,     ///<Success
 };
 
 
@@ -51,6 +51,8 @@ enum HTTPResult {
 
 class HTTPClient {
 public:
+  //static HTTPClient *instance;
+
   HTTPClient();
   ~HTTPClient();
 
@@ -68,29 +70,36 @@ public:
   //High Level setup functions
   /** Execute a GET request on the URL
   Blocks until completion
-  @param url : url on which to execute the request
+  @param url     : url on which to execute the request
   @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
   @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
   @return 0 on success, HTTP error (<0) on failure
   */
-  HTTPResult get(const char* url, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
+  HTTPResult get(
+		  const char   *url,
+		  IHTTPDataIn  *pDataIn,
+		  int           timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
 
   /** Execute a GET request on the URL
   Blocks until completion
   This is a helper to directly get a piece of text from a HTTP result
-  @param url : url on which to execute the request
-  @param result : pointer to a char array in which the result will be stored
+  @param url          : url on which to execute the request
+  @param result       : pointer to a char array in which the result will be stored
   @param maxResultLen : length of the char array (including space for the NULL-terminating char)
   @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
   @return 0 on success, HTTP error (<0) on failure
   */
-  HTTPResult get(const char* url, char* result, size_t maxResultLen, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
+  HTTPResult get(
+		  const char *url,
+		  char       *result,
+		  size_t      maxResultLen,
+		  int         timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
 
   /** Execute a POST request on the URL
   Blocks until completion
-  @param url : url on which to execute the request
+  @param url     : url on which to execute the request
   @param dataOut : a IHTTPDataOut instance that contains the data that will be posted
   @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
   @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
@@ -101,7 +110,7 @@ public:
 
   /** Execute a PUT request on the URL
   Blocks until completion
-  @param url : url on which to execute the request
+  @param url     : url on which to execute the request
   @param dataOut : a IHTTPDataOut instance that contains the data that will be put
   @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
   @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)

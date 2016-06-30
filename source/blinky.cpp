@@ -19,9 +19,12 @@
 #include "mbed-drivers/mbed.h"
 #include "example-mbedos-blinky/HTTPClient.h"
 
+static HTTPClient *http;
+
 //#define DEBUG
 
-static HTTPClient *http = NULL;
+//static HTTPClient *http = NULL;
+
 
 #ifdef DEBUG
 static bool checkHeap(int bytes){
@@ -85,21 +88,24 @@ static bool modem(char *datagram, uint32_t datagramLen){
 
 
 static void get(void) {
-	char str[64]; //512
-
+	char resultBuffer[64];
     // --- GET data ---
-	http = new HTTPClient();
+	if(!http){
+		http = new HTTPClient();
+	}
 
     printf("Trying to fetch page... \r\n");
-    int ret = http->get("http://mbed.org/media/uploads/donatien/hello.txt", str, 128);
+    int ret = http->get("http://mbed.org/media/uploads/donatien/hello.txt", resultBuffer, 128);
     if (!ret)
     {
-      printf("Page fetched successfully - read %d characters \r\n", strlen(str));
-      printf("Result: %s \r\n", str);
+    	//success
+    	printf("Page fetched successfully - read %d characters \r\n", strlen(resultBuffer));
+    	printf("Result: %s \r\n", resultBuffer);
     }
     else
     {
-      printf("Error - ret = %d - HTTP return code = %d \r\n", ret, http->getHTTPResponseCode());
+    	//errot
+    	printf("ret:%d resultBuffer:%s responseCode:%d \r\n\n", ret, resultBuffer, http->getHTTPResponseCode());
     }
 }
 
@@ -140,12 +146,12 @@ static void blinky(void) {
 }
 
 
-
-
 void app_start(int, char**)
 {
+	printf("start\r\n");
+
     //minar::Scheduler::postCallback(blinky).period(minar::milliseconds(2000));
-    minar::Scheduler::postCallback(get).period(minar::milliseconds(3000));
+    minar::Scheduler::postCallback(get).period(minar::milliseconds(10000));
 }
 
 

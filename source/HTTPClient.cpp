@@ -17,27 +17,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-//Debug is disabled by default
-#if 0
-//Enable debug
+
 #include <cstdio>
-#define DBG(x, ...)  std::printf("[HTTPClient : DBG]"x"\r\n",  ##__VA_ARGS__);
-#define WARN(x, ...) std::printf("[HTTPClient : WARN]"x"\r\n", ##__VA_ARGS__);
-#define ERR(x, ...)  std::printf("[HTTPClient : ERR]"x"\r\n",  ##__VA_ARGS__);
-
-#else
-//Disable debug
-#define DBG(x, ...)
-#define WARN(x, ...)
-#define ERR(x, ...)
-#endif
-
 
 #define HTTP_PORT 80
 #define OK 0
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #define MAX(x,y) (((x)>(y))?(x):(y))
-#define CHUNK_SIZE 256
+#define CHUNK_SIZE 128//256
 
 
 #include <cstring>
@@ -49,17 +36,13 @@ m_basicAuthUser(NULL),
 m_basicAuthPassword(NULL),
 m_httpResponseCode(0)
 {
-	printf("2\r\n");
 	pModem = new Nbiot();
-	printf("3\r\n");
-	if(!pModem){
-	  	 ERR("Out of Memory !!!\r\n");
-	}
 }
 
 
 HTTPClient::~HTTPClient()
 {
+	printf("-----------------");
 	delete(pModem);
 }
 
@@ -105,17 +88,17 @@ int HTTPClient::getHTTPResponseCode()
   return m_httpResponseCode;
 }
 
-#define CHECK_CONN_ERR(ret) \
+#define CHECK_CONN_printf(ret) \
   do{ \
     if(ret) { \
-      ERR("Connection error (%d)", ret); \
+      printf("Connection printfor (%d)", ret); \
       return HTTP_CONN; \
     } \
   } while(0)
 
-#define PRTCL_ERR() \
+#define PRTCL_printf() \
   do{ \
-    ERR("Protocol error"); \
+    printf("Protocol printfor"); \
     return HTTP_PRTCL; \
   } while(0)
 
@@ -140,7 +123,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   HTTPResult res = parseURL(url, scheme, sizeof(scheme), host, sizeof(host), &port, path, sizeof(path));
   if(res != HTTP_OK)
   {
-    ERR("parseURL returned %d", res);
+    printf("parseURL returned %d", res);
     return res;
   }
 
@@ -149,60 +132,60 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
     port = 80;
   }
 
-  DBG("Scheme: %s", scheme);
-  DBG("Host: %s", host);
-  DBG("Port: %d", port);
-  DBG("Path: %s", path);
+  printf("Scheme: %s \r\n", scheme);
+  printf("Host: %s \r\n", host);
+  printf("Port: %d \r\n", port);
+  printf("Path: %s \r\n", path);
 
   //Send request
-  DBG("Sending request");
+  printf("Sending request \r\n");
   char buf[CHUNK_SIZE];
   const char* meth = (method==HTTP_GET)?"GET":(method==HTTP_POST)?"POST":(method==HTTP_PUT)?"PUT":(method==HTTP_DELETE)?"DELETE":"";
   snprintf(buf, sizeof(buf), "%s %s HTTP/1.1\r\nHost: %s\r\n", meth, path, host); //Write request
   int ret = send(buf);
   if(ret)
   {
-    ERR("Could not write request");
+    printf("Could not write request \r\n");
     return HTTP_CONN;
   }
 
   //Send all headers
 
   //Send default headers
-  DBG("Sending headers");
+  printf("Sending headers \r\n");
   if( pDataOut != NULL )
   {
     if( pDataOut->getIsChunked() )
     {
       ret = send("Transfer-Encoding: chunked\r\n");
-      CHECK_CONN_ERR(ret);
+      CHECK_CONN_printf(ret);
     }
     else
     {
       snprintf(buf, sizeof(buf), "Content-Length: %d\r\n", pDataOut->getDataLen());
       ret = send(buf);
-      CHECK_CONN_ERR(ret);
+      CHECK_CONN_printf(ret);
     }
     char type[48];
     if( pDataOut->getDataType(type, 48) == HTTP_OK )
     {
       snprintf(buf, sizeof(buf), "Content-Type: %s\r\n", type);
       ret = send(buf);
-      CHECK_CONN_ERR(ret);
+      CHECK_CONN_printf(ret);
     }
   }
 
   //Close headers
-  DBG("Headers sent");
+  printf("Headers sent \r\n");
   ret = send("\r\n");
-  CHECK_CONN_ERR(ret);
+  CHECK_CONN_printf(ret);
 
   size_t trfLen;
 
   //Send data (if available)
   if( pDataOut != NULL )
   {
-    DBG("Sending data");
+    printf("Sending data \r\n");
     while(true)
     {
       size_t writtenLen = 0;
@@ -213,7 +196,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
         char chunkHeader[16];
         snprintf(chunkHeader, sizeof(chunkHeader), "%X\r\n", trfLen); //In hex encoding
         ret = send(chunkHeader);
-        CHECK_CONN_ERR(ret);
+        CHECK_CONN_printf(ret);
       }
       else if( trfLen == 0 )
       {
@@ -222,13 +205,13 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
       if( trfLen != 0 )
       {
         ret = send(buf, trfLen);
-        CHECK_CONN_ERR(ret);
+        CHECK_CONN_printf(ret);
       }
 
       if( pDataOut->getIsChunked()  )
       {
         ret = send("\r\n"); //Chunk-terminating CRLF
-        CHECK_CONN_ERR(ret);
+        CHECK_CONN_printf(ret);
       }
       else
       {
@@ -248,16 +231,16 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   }
 
   //Receive response
-  DBG("Receiving response");
+  printf("Receiving response \r\n");
   ret = recv(buf, CHUNK_SIZE - 1, CHUNK_SIZE - 1, &trfLen); //Read n bytes
-  CHECK_CONN_ERR(ret);
+  CHECK_CONN_printf(ret);
 
   buf[trfLen] = '\0';
 
   char* crlfPtr = strstr(buf, "\r\n");
   if(crlfPtr == NULL)
   {
-    PRTCL_ERR();
+    PRTCL_printf();
   }
 
   int crlfPos = crlfPtr - buf;
@@ -266,19 +249,19 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   //Parse HTTP response
   if( sscanf(buf, "HTTP/%*d.%*d %d %*[^\r\n]", &m_httpResponseCode) != 1 )
   {
-    //Cannot match string, error
-    ERR("Not a correct HTTP answer : %s\n", buf);
-    PRTCL_ERR();
+    //Cannot match string, printfor
+    printf("Not a correct HTTP answer : %s \r\n", buf);
+    PRTCL_printf();
   }
 
   if( (m_httpResponseCode < 200) || (m_httpResponseCode >= 300) )
   {
     //Did not return a 2xx code; TODO fetch headers/(&data?) anyway and implement a mean of writing/reading headers
-    WARN("Response code %d ", m_httpResponseCode);
-    PRTCL_ERR();
+    printf("Response code %d  \r\n", m_httpResponseCode);
+    PRTCL_printf();
   }
 
-  DBG("Reading headers");
+  printf("Reading headers \r\n");
 
   memmove(buf, &buf[crlfPos+2], trfLen - (crlfPos + 2) + 1); //Be sure to move NULL-terminating char as well
   trfLen -= (crlfPos + 2);
@@ -297,13 +280,13 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
         ret = recv(buf + trfLen, 1, CHUNK_SIZE - trfLen - 1, &newTrfLen);
         trfLen += newTrfLen;
         buf[trfLen] = '\0';
-        DBG("Read %d chars; In buf: [%s]", newTrfLen, buf);
-        CHECK_CONN_ERR(ret);
+        printf("Read %d chars; In buf: [%s]  \r\n", newTrfLen, buf);
+        CHECK_CONN_printf(ret);
         continue;
       }
       else
       {
-        PRTCL_ERR();
+        PRTCL_printf();
       }
     }
 
@@ -311,7 +294,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
 
     if(crlfPos == 0) //End of headers
     {
-      DBG("Headers read");
+      printf("Headers read \r\n");
       memmove(buf, &buf[2], trfLen - 2 + 1); //Be sure to move NULL-terminating char as well
       trfLen -= 2;
       break;
@@ -328,7 +311,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
     int n = sscanf(buf, "%31[^:]: %31[^\r\n]", key, value);
     if ( n == 2 )
     {
-      DBG("Read header : %s: %s\n", key, value);
+      printf("Read header : %s: %s  \r\n", key, value);
       if( !strcmp(key, "Content-Length") )
       {
         sscanf(value, "%d", &recvContentLength);
@@ -353,14 +336,14 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
     }
     else
     {
-      ERR("Could not parse header");
-      PRTCL_ERR();
+      printf("Could not parse header  \r\n");
+      PRTCL_printf();
     }
 
   }
 
   //Receive data
-  DBG("Receiving data");
+  printf("Receiving data  \r\n");
   while(true)
   {
     size_t readLen = 0;
@@ -392,12 +375,12 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
             size_t newTrfLen;
             ret = recv(buf + trfLen, 0, CHUNK_SIZE - trfLen - 1, &newTrfLen);
             trfLen += newTrfLen;
-            CHECK_CONN_ERR(ret);
+            CHECK_CONN_printf(ret);
             continue;
           }
           else
           {
-            PRTCL_ERR();
+            PRTCL_printf();
           }
         }
       } while(!foundCrlf);
@@ -405,8 +388,8 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
       int n = sscanf(buf, "%x", &readLen);
       if(n!=1)
       {
-        ERR("Could not read chunk length");
-        PRTCL_ERR();
+        printf("Could not read chunk length  \r\n");
+        PRTCL_printf();
       }
 
       memmove(buf, &buf[crlfPos+2], trfLen - (crlfPos + 2)); //Not need to move NULL-terminating char any more
@@ -423,7 +406,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
       readLen = recvContentLength;
     }
 
-    DBG("Retrieving %d bytes", readLen);
+    printf("Retrieving %d bytes  \r\n", readLen);
 
     do
     {
@@ -442,7 +425,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
       if(readLen)
       {
         ret = recv(buf, 1, CHUNK_SIZE - trfLen - 1, &trfLen);
-        CHECK_CONN_ERR(ret);
+        CHECK_CONN_printf(ret);
       }
     } while(readLen);
 
@@ -453,13 +436,13 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
         size_t newTrfLen;
         //Read missing chars to find end of chunk
         ret = recv(buf + trfLen, 2 - trfLen, CHUNK_SIZE - trfLen - 1, &newTrfLen);
-        CHECK_CONN_ERR(ret);
+        CHECK_CONN_printf(ret);
         trfLen += newTrfLen;
       }
       if( (buf[0] != '\r') || (buf[1] != '\n') )
       {
-        ERR("Format error");
-        PRTCL_ERR();
+        printf("Format printfor  \r\n");
+        PRTCL_printf();
       }
       memmove(buf, &buf[2], trfLen - 2);
       trfLen -= 2;
@@ -471,16 +454,16 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
 
   }
 
-  DBG("Completed HTTP transaction");
+  printf("Completed HTTP transaction  \r\n");
   return HTTP_OK;
 }
 
 
 
 
-HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pReadLen) //0 on success, err code on failure
+HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pReadLen) //0 on success, printf code on failure
 {
-  DBG("Trying to read between %d and %d bytes", minLen, maxLen);
+  printf("Trying to read between %d and %d bytes", minLen, maxLen);
   size_t readLen = 0;
 
   bool status = false;
@@ -492,12 +475,12 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
   {
     if(readLen < minLen)
     {
-      DBG("Trying to read at most %d bytes [Blocking]", minLen - readLen);
+      printf("Trying to read at most %d bytes [Blocking]", minLen - readLen);
       ret = pModem->receive (buf + readLen, minLen - readLen);
     }
     else
     {
-      DBG("Trying to read at most %d bytes [Not blocking]", maxLen - readLen);
+      printf("Trying to read at most %d bytes [Not blocking]", maxLen - readLen);
       ret = pModem->receive (buf + readLen, maxLen - readLen);
     }
 
@@ -513,7 +496,7 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
     {
       if(!pModem)
       {
-        ERR("Connection error (recv returned %d)", ret);
+        printf("Connection printfor (recv returned %d)", ret);
         *pReadLen = readLen;
         return HTTP_CONN;
       }
@@ -528,18 +511,18 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
       break;
     }
   }
-  DBG("Read %d bytes", readLen);
+  printf("Read %d bytes", readLen);
   *pReadLen = readLen;
   return HTTP_OK;
 }
 
-HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, err code on failure
+HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, printf code on failure
 {
   if(len == 0)
   {
     len = strlen(buf);
   }
-  DBG("Trying to write %d bytes", len);
+  printf("Trying to write %d bytes", len);
   size_t writtenLen = 0;
 
   bool status = false;
@@ -554,15 +537,15 @@ HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, err code on f
 		  }
 		  else if( ret == 0 )
 		  {
-		      WARN("Connection was closed by server ");
+		      printf("Connection was closed by server ");
 		      return HTTP_CLOSED; //Connection was closed by server
 		  }
 		  else
 		  {
-		      ERR("Connection error (send returned %d)", ret);
+		      printf("Connection printfor (send returned %d)", ret);
 		      return HTTP_CONN;
 		  }
-		  DBG("Written %d bytes", writtenLen);
+		  printf("Written %d bytes", writtenLen);
 		  return HTTP_OK;
 	  }
 }
@@ -573,13 +556,13 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
   char* hostPtr = (char*) strstr(url, "://");
   if(hostPtr == NULL)
   {
-    WARN("Could not find host");
+    printf("Could not find host");
     return HTTP_PARSE; //URL is invalid
   }
 
   if( maxSchemeLen < hostPtr - schemePtr + 1 ) //including NULL-terminating char
   {
-    WARN("Scheme str is too small (%d >= %d)", maxSchemeLen, hostPtr - schemePtr + 1);
+    printf("Scheme str is too small (%d >= %d)", maxSchemeLen, hostPtr - schemePtr + 1);
     return HTTP_PARSE;
   }
   memcpy(scheme, schemePtr, hostPtr - schemePtr);
@@ -596,7 +579,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
     portPtr++;
     if( sscanf(portPtr, "%hu", port) != 1)
     {
-      WARN("Could not find port");
+      printf("Could not find port");
       return HTTP_PARSE;
     }
   }
@@ -612,7 +595,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
 
   if( maxHostLen < hostLen + 1 ) //including NULL-terminating char
   {
-    WARN("Host str is too small (%d >= %d)", maxHostLen, hostLen + 1);
+    printf("Host str is too small (%d >= %d)", maxHostLen, hostLen + 1);
     return HTTP_PARSE;
   }
   memcpy(host, hostPtr, hostLen);
@@ -631,7 +614,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
 
   if( maxPathLen < pathLen + 1 ) //including NULL-terminating char
   {
-    WARN("Path str is too small (%d >= %d)", maxPathLen, pathLen + 1);
+    printf("Path str is too small (%d >= %d)", maxPathLen, pathLen + 1);
     return HTTP_PARSE;
   }
   memcpy(path, pathPtr, pathLen);

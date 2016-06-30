@@ -26,10 +26,10 @@ bool Nbiot::sendPrintf(const char * pFormat, ...)
 
     if (gInitialised){
         va_start(args, pFormat);
-        len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
+        len = vsnprintf(gHexBuf, sizeof(gHexBuf), pFormat, args);
         va_end(args);
-        success = gpSerialPort->transmitBuffer((const char *) gTxBuf, len);
-        printf("TX %d: %s \r\n", len, (char *) gTxBuf);
+        success = gpSerialPort->transmitBuffer((const char *) gHexBuf, len);
+        printf("TX %d: %s \r\n", len, (char *) gHexBuf);
     }
     return success;
 }
@@ -267,35 +267,39 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
 // optional timeoutSeconds, waiting for confirmation that the message has been sent.
 // If timeoutSeconds is zero this function will block indefinitely until the message
 // has been sent.
-bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds /*5sec*/)
+bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
 {
     bool success = false;
     AtResponse response;
     uint32_t   charCount = 0;
 
+    // Check that the incoming message, when hex coded (so * 2) is not too big
     if ((msgSize * 2) <= sizeof(gHexBuf))
     {
         charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
-
         printf("[modem->send]  sending datagram to network, %d characters: %.*s\r\n", (int) msgSize, pMsg);
+        //sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
+        sendPrintf("AT+MGS=%d, %.*s%s", AT_TERMINATOR);
 
-        sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
-
+        // Wait for confirmation
         response = waitResponse("+MGS:OK\r\n");
         if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
         {
+            // It worked, wait for the "OK"
             waitResponse();
+            // Now wait for the SENT indication
             response = waitResponse("+SMI:SENT\r\n", timeoutSeconds);
             if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
             {
+                // All done
                 success = true;
-                printf ("All done SENT.\r\n");
+                printf ("[modem->send]  modem reports datagram SENT.\r\n");
             }
         }
     }
     else
     {
-        printf ("Datagram is too long (%d characters when only %d bytes can be sent).\r\n", msgSize, (int) (sizeof (gHexBuf) / 2));
+        printf ("[modem->send]  datagram is too long (%d characters when only %d bytes can be sent).\r\n", msgSize, (int) (sizeof (gHexBuf) / 2));
     }
     return success;
 }
@@ -308,27 +312,36 @@ bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds /*5sec*/)
 // bytes received.  Up to msgSize bytes of returned data will be stored at pMsg; any
 // data beyond that will be lost.  If timeoutSeconds is zero this function will block
 // indefinitely until a message has been received.
-uint32_t Nbiot::receive (char * pMsg, uint32_t msgSize, time_t timeoutSeconds /*5sec*/)
+// Receive a message from the network
+uint32_t Nbiot::receive (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
 {
     int bytesReceived = 0;
     AtResponse response;
-    char *pHexStart = NULL;
-    char *pHexEnd = NULL;
+    char * pHexStart = NULL;
+    char * pHexEnd = NULL;
 
-    printf("%d bytes received.\r\n", msgSize);
+    printf("[modem->receive] receiving a datagram of up to %d byte(s) from the network...\r\n", msgSize);
     sendPrintf("AT+MGR%s", AT_TERMINATOR);
+
     response = waitResponse("+MGR:", timeoutSeconds, gHexBuf, sizeof (gHexBuf));
 
-    if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
-        if (sscanf(gHexBuf, " +MGR:%d,", &bytesReceived) == 1) {
+    if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
+    {
+        if (sscanf(gHexBuf, " +MGR:%d,", &bytesReceived) == 1) // The space in the string is significant,
+                                                               // it allows any whitespace characters in the input string
+        {
             pHexStart = strchr (gHexBuf, ',');
-            if (pHexStart != NULL){
+            if (pHexStart != NULL)
+            {
                 pHexStart++;
                 pHexEnd = strstr (pHexStart, AT_TERMINATOR);
-                if ((pHexEnd != NULL) && (pMsg != NULL)){
+                if ((pHexEnd != NULL) && (pMsg != NULL))
+                {
                     hexStringToBytes (pHexStart, pHexEnd - pHexStart, pMsg, msgSize);
                 }
             }
+
+            // Wait for the OK at the end
             response = waitResponse("+MGR:OK\r\n");
         }
     }
