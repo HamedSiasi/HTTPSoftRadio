@@ -42,7 +42,6 @@ m_httpResponseCode(0)
 
 HTTPClient::~HTTPClient()
 {
-	printf("-----------------");
 	delete(pModem);
 }
 
@@ -133,9 +132,9 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   }
 
   printf("Scheme: %s \r\n", scheme);
-  printf("Host: %s \r\n", host);
-  printf("Port: %d \r\n", port);
-  printf("Path: %s \r\n", path);
+  printf("Host:   %s \r\n", host);
+  printf("Port:   %d \r\n", port);
+  printf("Path:   %s \r\n", path);
 
   //Send request
   printf("Sending request \r\n");
@@ -143,6 +142,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   const char* meth = (method==HTTP_GET)?"GET":(method==HTTP_POST)?"POST":(method==HTTP_PUT)?"PUT":(method==HTTP_DELETE)?"DELETE":"";
   snprintf(buf, sizeof(buf), "%s %s HTTP/1.1\r\nHost: %s\r\n", meth, path, host); //Write request
   int ret = send(buf);
+
   if(ret)
   {
     printf("Could not write request \r\n");
@@ -516,7 +516,7 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
   return HTTP_OK;
 }
 
-HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, printf code on failure
+HTTPResult HTTPClient::send(char* buf, size_t len /*0*/) //0 on success, printf code on failure
 {
   if(len == 0)
   {
@@ -529,26 +529,29 @@ HTTPResult HTTPClient::send(char* buf, size_t len) //0 on success, printf code o
   bool usingSoftRadio = true;
 
   status = pModem->connect(usingSoftRadio);
-  if (status){
-		  int ret = pModem->send ( buf, (uint32_t)len);
-		  if(ret > 0)
-		  {
-		      writtenLen += ret;
-		  }
-		  else if( ret == 0 )
-		  {
-		      printf("Connection was closed by server ");
+  if (status)
+  {
+	  int ret = pModem->send (buf,(uint32_t)len);
+	  if(ret > 0)
+	  {
+		  	  writtenLen += ret;
+	  }
+	  else if( ret == 0 )
+	  {
+		  	  printf("Connection was closed by server ");
 		      return HTTP_CLOSED; //Connection was closed by server
-		  }
-		  else
-		  {
+	  }
+	  else
+	  {
 		      printf("Connection printfor (send returned %d)", ret);
 		      return HTTP_CONN;
-		  }
-		  printf("Written %d bytes", writtenLen);
-		  return HTTP_OK;
 	  }
+	  printf("Written %d bytes", writtenLen);
+	  return HTTP_OK;
+  }
 }
+
+
 
 HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeLen, char* host, size_t maxHostLen, uint16_t* port, char* path, size_t maxPathLen) //Parse URL
 {

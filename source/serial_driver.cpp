@@ -34,12 +34,15 @@ SerialPort::~SerialPort()
 // Transmit lenBuf characters from pBuf over the serial port.
 // Returns TRUE on success, otherwise FALSE.
 
-bool SerialPort::transmitBuffer(const char *pBuf, uint32_t lenBuf)
+bool SerialPort::transmitBuffer(const char *pBuf)
 {
 	unsigned long result = 0;
-    if(pgUart->writeable()){
+    if(pgUart->writeable())
+    {
+    	printf("SX: %s \r\n", pBuf);
     	result = pgUart->printf(pBuf);
-        if (!result){
+        if (!result)
+        {
             printf ("[serial->transmitBuffer]  Transmit failed !!! \r\n");
         }
     }

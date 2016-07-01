@@ -17,20 +17,25 @@ Timer timer;
 
 
 
-// (1) Send a string, printf()-style to the serial port
+
 bool Nbiot::sendPrintf(const char * pFormat, ...)
 {
-	bool success = false;
     va_list args;
+    bool success = false;
     uint32_t len = 0;
 
-    if (gInitialised){
+    if (gInitialised)
+    {
+    	char gTxBuf [MAX_LEN_SEND_STRING];
+
         va_start(args, pFormat);
-        len = vsnprintf(gHexBuf, sizeof(gHexBuf), pFormat, args);
+        len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
         va_end(args);
-        success = gpSerialPort->transmitBuffer((const char *) gHexBuf, len);
-        printf("TX %d: %s \r\n", len, (char *) gHexBuf);
+
+        printf("TX: %s \r\n", gTxBuf);
+        success = gpSerialPort->transmitBuffer((const char *) gTxBuf);
     }
+
     return success;
 }
 
@@ -205,9 +210,8 @@ Nbiot::Nbiot(const char * pPortname)
     gpSerialPort = new SerialPort();
     if (gpSerialPort)
     {
-            //printf ("[modem->Constructor]  connected to %s.\r\n", pPortname);
-            gInitialised = true;
-            waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
+    	gInitialised = true;
+    	//waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
     }
 }
 
@@ -246,18 +250,21 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
                 printf ("Connected to network!\r\n");
                 sendPrintf("AT+SMI=1%s", AT_TERMINATOR);
                 response = waitResponse("+SMI:OK\r\n");
-                if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
+                if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
+                {
                     waitResponse();
                     success = true;
                     printf ("All done!\r\n");
                 }
             }
-            else{
+            else
+            {
                 wait_ms(1000);
             }
         } while ((!success) && ((timeoutSeconds == 0) || (timer.read() < timeoutSeconds)));
     }
     return success;
+	//return true;
 }
 
 
@@ -276,10 +283,10 @@ bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
     // Check that the incoming message, when hex coded (so * 2) is not too big
     if ((msgSize * 2) <= sizeof(gHexBuf))
     {
-        charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
-        printf("[modem->send]  sending datagram to network, %d characters: %.*s\r\n", (int) msgSize, pMsg);
-        //sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
-        sendPrintf("AT+MGS=%d, %.*s%s", AT_TERMINATOR);
+    	charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
+    	printf("Sending datagram to network, %d characters: %.*s\r\n", msgSize, (int) msgSize, pMsg);
+    	sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
+
 
         // Wait for confirmation
         response = waitResponse("+MGS:OK\r\n");
@@ -293,7 +300,7 @@ bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
             {
                 // All done
                 success = true;
-                printf ("[modem->send]  modem reports datagram SENT.\r\n");
+                printf ("HOOOOOOOOOORRRRRRRRRRRRRAAAAAAAAAAAAAA.\r\n");
             }
         }
     }

@@ -89,8 +89,8 @@ static bool modem(char *datagram, uint32_t datagramLen){
 
 static void get(void) {
 	char resultBuffer[64];
-    // --- GET data ---
-	if(!http){
+	if(!http)
+	{
 		http = new HTTPClient();
 	}
 
@@ -148,10 +148,8 @@ static void blinky(void) {
 
 void app_start(int, char**)
 {
-	printf("start\r\n");
-
     //minar::Scheduler::postCallback(blinky).period(minar::milliseconds(2000));
-    minar::Scheduler::postCallback(get).period(minar::milliseconds(10000));
+    minar::Scheduler::postCallback(get).period(minar::milliseconds(100));
 }
 
 
