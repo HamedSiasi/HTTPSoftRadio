@@ -19,7 +19,7 @@
 #include "mbed-drivers/mbed.h"
 #include "example-mbedos-blinky/HTTPClient.h"
 
-static HTTPClient *http;
+//static HTTPClient *http;
 
 //#define DEBUG
 
@@ -88,21 +88,18 @@ static bool modem(char *datagram, uint32_t datagramLen){
 
 static void get(void) {
 	char resultBuffer[128];
-	if(!http)
-	{
-		printf("JUST ONE TIME ... \r\n");
-		http = new HTTPClient();
-	}
+
+	HTTPClient* http = NULL;
+	http = HTTPClient::getInstance();
+
     int ret = http->get("http://mbed.org/media/uploads/donatien/hello.txt", resultBuffer, 128);
     if (!ret)
     {
-    	// success
     	printf("Page fetched successfully - read %d characters \r\n", strlen(resultBuffer));
     	printf("Result: %s \r\n", resultBuffer);
     }
     else
     {
-    	// error
     	printf("ret:%d resultBuffer:%s responseCode:%d \r\n\n", ret, resultBuffer, http->getHTTPResponseCode());
     }
 }
@@ -146,8 +143,9 @@ static void blinky(void) {
 
 void app_start(int, char**)
 {
+	printf("start\r\n");
     //minar::Scheduler::postCallback(blinky).period(minar::milliseconds(2000));
-    minar::Scheduler::postCallback(get).period(minar::milliseconds(10000));
+    minar::Scheduler::postCallback(get).period(minar::milliseconds(1000));
 }
 
 

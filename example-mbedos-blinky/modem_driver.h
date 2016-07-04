@@ -5,8 +5,8 @@
 
 #include "example-mbedos-blinky/serial_driver.h"
 
-#define MAX_LEN_SEND_STRING              150 // 156
-#define DEFAULT_RX_INT_STORAGE           150 // 156
+#define MAX_LEN_SEND_STRING              150
+#define DEFAULT_RX_INT_STORAGE           150
 //timeout
 #define DEFAULT_CONNECT_TIMEOUT_SECONDS   5
 #define DEFAULT_SEND_TIMEOUT_SECONDS      5
@@ -16,6 +16,13 @@
 
 
 class Nbiot{
+private:
+	static bool flag;
+	static Nbiot* obj;
+	static SerialPort *gpSerialPort;
+	char gHexBuf [MAX_LEN_SEND_STRING];
+	char gRxBuf  [DEFAULT_RX_INT_STORAGE];
+
 public:
     Nbiot (const char * pPortname = "\\\\.\\COM10");
     ~Nbiot ();
@@ -34,6 +41,10 @@ public:
 			uint32_t   msgSize,
 			time_t     timeoutSeconds = DEFAULT_RECEIVE_TIMEOUT_SECONDS);
 
+    static Nbiot* getInstance();
+
+
+
 protected:
 
     typedef enum{
@@ -44,17 +55,12 @@ protected:
         AT_RESPONSE_OTHER
     } AtResponse;
 
-    char gHexBuf [MAX_LEN_SEND_STRING];
-    char gRxBuf  [DEFAULT_RX_INT_STORAGE];
-    
     uint32_t gLenRx;
     uint32_t gLenResponse;
     uint8_t  gMatched;
     const char *gpResponse;
-    
-    SerialPort *gpSerialPort = NULL;
     bool gInitialised;
-
+    
     bool sendPrintf (const char * pFormat, ...);
     uint32_t getLine (char * pBuf, uint32_t lenBuf);
     void rxTick();

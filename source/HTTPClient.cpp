@@ -17,34 +17,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
 #include <cstdio>
 
-#define HTTP_PORT 80
 #define OK 0
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #define MAX(x,y) (((x)>(y))?(x):(y))
 #define CHUNK_SIZE 128
 
-
 #include <cstring>
 #include "example-mbedos-blinky/HTTPClient.h"
 
+bool HTTPClient::flag = false;
+HTTPClient *HTTPClient::obj = NULL;
+Nbiot      *HTTPClient::pModem = NULL;
 
-HTTPClient::HTTPClient() :
-m_basicAuthUser(NULL),
-m_basicAuthPassword(NULL),
-m_httpResponseCode(0)
-{
-	pModem = new Nbiot();
+HTTPClient* HTTPClient::getInstance(){
+	if(!obj){
+		obj = new HTTPClient();
+	}
+	return obj;
 }
 
+HTTPClient::HTTPClient() :m_basicAuthUser(NULL),m_basicAuthPassword(NULL),m_httpResponseCode(0)
+{
+	flag = true;
+	pModem = Nbiot::getInstance();
+}
 
 HTTPClient::~HTTPClient()
 {
+	flag = false;
 	delete(pModem);
 }
-
 
 #if 0
 void HTTPClient::basicAuth(const char* user, const char* password) //Basic Authentification
@@ -53,8 +57,6 @@ void HTTPClient::basicAuth(const char* user, const char* password) //Basic Authe
   m_basicAuthPassword = password;
 }
 #endif
-
-
 
 HTTPResult HTTPClient::get(const char* url, IHTTPDataIn* pDataIn, int timeout /*= HTTP_CLIENT_DEFAULT_TIMEOUT*/) //Blocking
 {
@@ -90,16 +92,17 @@ int HTTPClient::getHTTPResponseCode()
 #define CHECK_CONN_printf(ret) \
   do{ \
     if(ret) { \
-      printf("Connection printfor (%d)", ret); \
+      printf("Connection printfor (%d) \r\n", ret); \
       return HTTP_CONN; \
     } \
   } while(0)
 
 #define PRTCL_printf() \
   do{ \
-    printf("Protocol printfor"); \
+    printf("Protocol printfor \r\n"); \
     return HTTP_PRTCL; \
   } while(0)
+
 
 
 
@@ -122,7 +125,7 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   HTTPResult res = parseURL(url, scheme, sizeof(scheme), host, sizeof(host), &port, path, sizeof(path));
   if(res != HTTP_OK)
   {
-    printf("parseURL returned %d", res);
+    printf("parseURL returned %d \r\n", res);
     return res;
   }
 
@@ -135,8 +138,6 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   //printf("Host:   %s \r\n", host);
   //printf("Port:   %d \r\n", port);
   //printf("Path:   %s \r\n", path);
-
-
 
   //Send request
   printf("Sending request \r\n");
@@ -462,28 +463,25 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
 }
 
 
-
-
 HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pReadLen) //0 on success, printf code on failure
 {
-  printf("Trying to read between %d and %d bytes", minLen, maxLen);
+  printf("Trying to read between %d and %d bytes\r\n", minLen, maxLen);
   size_t readLen = 0;
 
   bool status = false;
   bool usingSoftRadio = true;
-
 
   int ret;
   while(readLen < maxLen)
   {
     if(readLen < minLen)
     {
-      printf("Trying to read at most %d bytes [Blocking]", minLen - readLen);
+      printf("Trying to read at most %d bytes \r\n", minLen - readLen);
       ret = pModem->receive (buf + readLen, minLen - readLen);
     }
     else
     {
-      printf("Trying to read at most %d bytes [Not blocking]", maxLen - readLen);
+      printf("Trying to read at most %d bytes \r\n", maxLen - readLen);
       ret = pModem->receive (buf + readLen, maxLen - readLen);
     }
 
@@ -499,7 +497,7 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
     {
       if(!pModem)
       {
-        printf("Connection printfor (recv returned %d)", ret);
+        printf("Connection printfor (recv returned %d) \r\n", ret);
         *pReadLen = readLen;
         return HTTP_CONN;
       }
@@ -514,10 +512,12 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
       break;
     }
   }
-  printf("Read %d bytes", readLen);
+  printf("<-- %s\r\n", pBuf);
   *pReadLen = readLen;
   return HTTP_OK;
 }
+
+
 
 HTTPResult HTTPClient::send(char* buf, size_t len /*0*/) //0 on success, printf code on failure
 {
@@ -525,7 +525,7 @@ HTTPResult HTTPClient::send(char* buf, size_t len /*0*/) //0 on success, printf 
   {
     len = strlen(buf);
   }
-  printf("Trying to write %d bytes", len);
+  printf("Trying to write %d bytes \r\n", len);
   size_t writtenLen = 0;
 
   bool status = false;
@@ -541,20 +541,18 @@ HTTPResult HTTPClient::send(char* buf, size_t len /*0*/) //0 on success, printf 
 	  }
 	  else if( ret == 0 )
 	  {
-		  	  printf("Connection was closed by server ");
+		  	  printf("Connection was closed by server  \r\n");
 		      return HTTP_CLOSED; //Connection was closed by server
 	  }
 	  else
 	  {
-		      printf("Connection printfor (send returned %d)", ret);
+		      printf("Connection printfor (send returned %d) \r\n", ret);
 		      return HTTP_CONN;
 	  }
-	  printf("Written %d bytes", writtenLen);
+	  printf("Written %d bytes \r\n", writtenLen);
 	  return HTTP_OK;
   }
 }
-
-
 
 HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeLen, char* host, size_t maxHostLen, uint16_t* port, char* path, size_t maxPathLen) //Parse URL
 {
@@ -562,13 +560,13 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
   char* hostPtr = (char*) strstr(url, "://");
   if(hostPtr == NULL)
   {
-    printf("Could not find host");
+    printf("Could not find host \r\n");
     return HTTP_PARSE; //URL is invalid
   }
 
   if( maxSchemeLen < hostPtr - schemePtr + 1 ) //including NULL-terminating char
   {
-    printf("Scheme str is too small (%d >= %d)", maxSchemeLen, hostPtr - schemePtr + 1);
+    printf("Scheme str is too small (%d >= %d) \r\n", maxSchemeLen, hostPtr - schemePtr + 1);
     return HTTP_PARSE;
   }
   memcpy(scheme, schemePtr, hostPtr - schemePtr);
@@ -585,7 +583,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
     portPtr++;
     if( sscanf(portPtr, "%hu", port) != 1)
     {
-      printf("Could not find port");
+      printf("Could not find port \r\n");
       return HTTP_PARSE;
     }
   }
@@ -601,7 +599,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
 
   if( maxHostLen < hostLen + 1 ) //including NULL-terminating char
   {
-    printf("Host str is too small (%d >= %d)", maxHostLen, hostLen + 1);
+    printf("Host str is too small (%d >= %d) \r\n", maxHostLen, hostLen + 1);
     return HTTP_PARSE;
   }
   memcpy(host, hostPtr, hostLen);
@@ -620,7 +618,7 @@ HTTPResult HTTPClient::parseURL(const char* url, char* scheme, size_t maxSchemeL
 
   if( maxPathLen < pathLen + 1 ) //including NULL-terminating char
   {
-    printf("Path str is too small (%d >= %d)", maxPathLen, pathLen + 1);
+    printf("Path str is too small (%d >= %d) \r\n", maxPathLen, pathLen + 1);
     return HTTP_PARSE;
   }
   memcpy(path, pathPtr, pathLen);

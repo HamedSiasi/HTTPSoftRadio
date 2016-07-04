@@ -50,9 +50,8 @@ enum HTTPResult {
 
 
 class HTTPClient {
-public:
-  //static HTTPClient *instance;
 
+public:
   HTTPClient();
   ~HTTPClient();
 
@@ -67,77 +66,28 @@ public:
 #endif
 
 
-  //High Level setup functions
-  /** Execute a GET request on the URL
-  Blocks until completion
-  @param url     : url on which to execute the request
-  @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
-  @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
-  @return 0 on success, HTTP error (<0) on failure
-  */
   HTTPResult get(
 		  const char   *url,
 		  IHTTPDataIn  *pDataIn,
 		  int           timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
-
-  /** Execute a GET request on the URL
-  Blocks until completion
-  This is a helper to directly get a piece of text from a HTTP result
-  @param url          : url on which to execute the request
-  @param result       : pointer to a char array in which the result will be stored
-  @param maxResultLen : length of the char array (including space for the NULL-terminating char)
-  @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
-  @return 0 on success, HTTP error (<0) on failure
-  */
   HTTPResult get(
 		  const char *url,
 		  char       *result,
 		  size_t      maxResultLen,
 		  int         timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
-
-  /** Execute a POST request on the URL
-  Blocks until completion
-  @param url     : url on which to execute the request
-  @param dataOut : a IHTTPDataOut instance that contains the data that will be posted
-  @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
-  @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
-  @return 0 on success, HTTP error (<0) on failure
-  */
   HTTPResult post(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
-
-
-  /** Execute a PUT request on the URL
-  Blocks until completion
-  @param url     : url on which to execute the request
-  @param dataOut : a IHTTPDataOut instance that contains the data that will be put
-  @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
-  @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
-  @return 0 on success, HTTP error (<0) on failure
-  */
   HTTPResult put(const char* url, const IHTTPDataOut& dataOut, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
-
-
-  /** Execute a DELETE request on the URL
-  Blocks until completion
-  @param url : url on which to execute the request
-  @param pDataIn : pointer to an IHTTPDataIn instance that will collect the data returned by the request, can be NULL
-  @param timeout waiting timeout in ms (osWaitForever for blocking function, not recommended)
-  @return 0 on success, HTTP error (<0) on failure
-  */
   HTTPResult del(const char* url, IHTTPDataIn* pDataIn, int timeout = HTTP_CLIENT_DEFAULT_TIMEOUT); //Blocking
 
-
-  /** Get last request's HTTP response code
-  @return The HTTP response code of the last request
-  */
   int getHTTPResponseCode();
+  static HTTPClient* getInstance();
 
-protected:
-  Nbiot *pModem = NULL;
 
 private:
+  static Nbiot *pModem;
+
   enum HTTP_METH
   {
     HTTP_GET,
@@ -156,6 +106,9 @@ private:
   const char* m_basicAuthUser;
   const char* m_basicAuthPassword;
   int m_httpResponseCode;
+
+  static bool flag;
+  static HTTPClient* obj;
 };
 
 #include "HTTPText.h"

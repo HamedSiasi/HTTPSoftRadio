@@ -6,6 +6,17 @@
 #include "example-mbedos-blinky/serial_driver.h"
 
 
+bool SerialPort::flag = false;
+SerialPort *SerialPort::obj = NULL;
+Serial *SerialPort::pgUart = NULL;
+
+
+SerialPort* SerialPort::getInstance(){
+	if(!flag){
+		obj = new SerialPort();
+	}
+	return obj;
+}
 
 
 // (1)
@@ -14,17 +25,20 @@ SerialPort::SerialPort(
 		PinName rx     /*UART1_RX*/,
 		int baudrate   /*9600*/)
 {
-
-	pgUart = new Serial(tx, rx);
-	pgUart->baud(baudrate);
-	pgUart->format(8, SerialBase::None, 1);
-
+	flag = true;
+	if(!pgUart)
+	{
+		pgUart = new Serial(tx, rx);
+		pgUart->baud(baudrate);
+		pgUart->format(8, SerialBase::None, 1);
+	}
 }
 
 
 // (2)
 SerialPort::~SerialPort()
 {
+	flag = false;
 	delete (pgUart);
 }
 
@@ -40,7 +54,7 @@ bool SerialPort::transmitBuffer(const char *pBuf)
 	unsigned long result = 0;
     if(pgUart->writeable())
     {
-    	//printf("--> %s \r\n", pBuf);
+    	printf("--> %s \r\n", pBuf);
     	result = pgUart->printf("%s\r\n",pBuf);
     	if (!result)
         {
