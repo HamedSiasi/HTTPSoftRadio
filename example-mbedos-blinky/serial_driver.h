@@ -17,6 +17,7 @@ public:
     uint32_t receiveBuffer(char * pBuf, uint32_t lenBuf);
     int32_t receiveChar();
 
+
 protected:
     Serial *pgUart = NULL;
 };

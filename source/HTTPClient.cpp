@@ -24,7 +24,7 @@
 #define OK 0
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #define MAX(x,y) (((x)>(y))?(x):(y))
-#define CHUNK_SIZE 128//256
+#define CHUNK_SIZE 128
 
 
 #include <cstring>
@@ -136,11 +136,14 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
   printf("Port:   %d \r\n", port);
   printf("Path:   %s \r\n", path);
 
+
+
   //Send request
   printf("Sending request \r\n");
   char buf[CHUNK_SIZE];
   const char* meth = (method==HTTP_GET)?"GET":(method==HTTP_POST)?"POST":(method==HTTP_PUT)?"PUT":(method==HTTP_DELETE)?"DELETE":"";
   snprintf(buf, sizeof(buf), "%s %s HTTP/1.1\r\nHost: %s\r\n", meth, path, host); //Write request
+  printf("Size of buffer %d \r\n", sizeof(buf));
   int ret = send(buf);
 
   if(ret)

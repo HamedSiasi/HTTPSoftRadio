@@ -32,7 +32,7 @@ bool Nbiot::sendPrintf(const char * pFormat, ...)
         len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
         va_end(args);
 
-        printf("TX: %s \r\n", gTxBuf);
+        printf("--> %s \r\n", gTxBuf);
         success = gpSerialPort->transmitBuffer((const char *) gTxBuf);
     }
 
@@ -65,7 +65,6 @@ uint32_t Nbiot::getLine(char * pBuf, uint32_t lenBuf)
                     gLenRx++;
                     if (x == AT_TERMINATOR[gMatched]){
                         gMatched++;
-                        //printf("144 %d %d %d %d %d\r\n", gLenRx, lenBuf, (int)x, (int)gMatched, sizeof(AT_TERMINATOR) - 1);
                     }
                     else{
                         gMatched = 0;
@@ -97,7 +96,6 @@ void Nbiot::rxTick()
 
     if (len > sizeof(AT_TERMINATOR) - 1) // -1 to omit NULL terminator
     {
-        printf ("RX %d: \"%.*s\".\r\n", (int) (len - (sizeof(AT_TERMINATOR) - 1)), (int) (len - (sizeof(AT_TERMINATOR) - 1)), gRxBuf);
         if (gpResponse == NULL)
         {
             gLenResponse = len;
@@ -211,7 +209,7 @@ Nbiot::Nbiot(const char * pPortname)
     if (gpSerialPort)
     {
     	gInitialised = true;
-    	//waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
+    	waitResponse(NULL, DEFAULT_FLUSH_TIMEOUT_SECONDS);
     }
 }
 
@@ -274,7 +272,7 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
 // optional timeoutSeconds, waiting for confirmation that the message has been sent.
 // If timeoutSeconds is zero this function will block indefinitely until the message
 // has been sent.
-bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
+bool Nbiot::send (char *pMsg, uint32_t msgSize, time_t timeoutSeconds)
 {
     bool success = false;
     AtResponse response;
@@ -284,9 +282,13 @@ bool Nbiot::send (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
     if ((msgSize * 2) <= sizeof(gHexBuf))
     {
     	charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
-    	printf("Sending datagram to network, %d characters: %.*s\r\n", msgSize, (int) msgSize, pMsg);
-    	sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
+    	//printf("Sending datagram to network, %d characters: %.*s\r\n", msgSize, (int) msgSize, pMsg);
 
+    	printf("msg: %s %d\r\n", msg, msgSize);
+    	printf("msg: %s %d\r\n", gHexBuf, charCount);
+    	printf("msg: %d %d\r\n", sizeof(gHexBuf), strlen(gHexBuf));
+
+    	sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
 
         // Wait for confirmation
         response = waitResponse("+MGS:OK\r\n");
@@ -327,7 +329,6 @@ uint32_t Nbiot::receive (char * pMsg, uint32_t msgSize, time_t timeoutSeconds)
     char * pHexStart = NULL;
     char * pHexEnd = NULL;
 
-    printf("[modem->receive] receiving a datagram of up to %d byte(s) from the network...\r\n", msgSize);
     sendPrintf("AT+MGR%s", AT_TERMINATOR);
 
     response = waitResponse("+MGR:", timeoutSeconds, gHexBuf, sizeof (gHexBuf));

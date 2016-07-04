@@ -45,7 +45,6 @@ protected:
     } AtResponse;
 
     char gHexBuf [MAX_LEN_SEND_STRING];
-    //char gTxBuf  [MAX_LEN_SEND_STRING];
     char gRxBuf  [DEFAULT_RX_INT_STORAGE];
     
     uint32_t gLenRx;

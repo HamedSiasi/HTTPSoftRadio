@@ -88,7 +88,7 @@ static bool modem(char *datagram, uint32_t datagramLen){
 
 
 static void get(void) {
-	char resultBuffer[64];
+	char resultBuffer[128];
 	if(!http)
 	{
 		http = new HTTPClient();
