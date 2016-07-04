@@ -5,8 +5,8 @@
 
 #include "example-mbedos-blinky/serial_driver.h"
 
-#define MAX_LEN_SEND_STRING              128 // 256
-#define DEFAULT_RX_INT_STORAGE           128 // 256
+#define MAX_LEN_SEND_STRING              150 // 156
+#define DEFAULT_RX_INT_STORAGE           150 // 156
 //timeout
 #define DEFAULT_CONNECT_TIMEOUT_SECONDS   5
 #define DEFAULT_SEND_TIMEOUT_SECONDS      5

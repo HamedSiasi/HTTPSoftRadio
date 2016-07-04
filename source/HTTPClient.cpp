@@ -131,10 +131,10 @@ HTTPResult HTTPClient::connect(const char* url, HTTP_METH method, IHTTPDataOut* 
     port = 80;
   }
 
-  printf("Scheme: %s \r\n", scheme);
-  printf("Host:   %s \r\n", host);
-  printf("Port:   %d \r\n", port);
-  printf("Path:   %s \r\n", path);
+  //printf("Scheme: %s \r\n", scheme);
+  //printf("Host:   %s \r\n", host);
+  //printf("Port:   %d \r\n", port);
+  //printf("Path:   %s \r\n", path);
 
 
 

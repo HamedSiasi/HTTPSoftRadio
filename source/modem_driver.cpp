@@ -32,7 +32,7 @@ bool Nbiot::sendPrintf(const char * pFormat, ...)
         len = vsnprintf(gTxBuf, sizeof(gTxBuf), pFormat, args);
         va_end(args);
 
-        printf("--> %s \r\n", gTxBuf);
+        printf("%s \r\n", gTxBuf);
         success = gpSerialPort->transmitBuffer((const char *) gTxBuf);
     }
 
@@ -245,14 +245,12 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
 
             if (response == AT_RESPONSE_STARTS_AS_EXPECTED){
                 waitResponse();
-                printf ("Connected to network!\r\n");
                 sendPrintf("AT+SMI=1%s", AT_TERMINATOR);
                 response = waitResponse("+SMI:OK\r\n");
                 if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
                 {
                     waitResponse();
                     success = true;
-                    printf ("All done!\r\n");
                 }
             }
             else
@@ -262,7 +260,6 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
         } while ((!success) && ((timeoutSeconds == 0) || (timer.read() < timeoutSeconds)));
     }
     return success;
-	//return true;
 }
 
 
@@ -274,20 +271,16 @@ bool Nbiot::connect(bool usingSoftRadio /*true*/, time_t timeoutSeconds /*5sec*/
 // has been sent.
 bool Nbiot::send (char *pMsg, uint32_t msgSize, time_t timeoutSeconds)
 {
-    bool success = false;
-    AtResponse response;
-    uint32_t   charCount = 0;
+    bool        success = false;
+    AtResponse  response;
+    uint32_t    charCount = 0;
 
     // Check that the incoming message, when hex coded (so * 2) is not too big
     if ((msgSize * 2) <= sizeof(gHexBuf))
     {
     	charCount = bytesToHexString (pMsg, msgSize, gHexBuf, sizeof(gHexBuf));
-    	//printf("Sending datagram to network, %d characters: %.*s\r\n", msgSize, (int) msgSize, pMsg);
 
-    	printf("msg: %s %d\r\n", msg, msgSize);
-    	printf("msg: %s %d\r\n", gHexBuf, charCount);
-    	printf("msg: %d %d\r\n", sizeof(gHexBuf), strlen(gHexBuf));
-
+    	printf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
     	sendPrintf("AT+MGS=%d, %.*s%s", msgSize, charCount, gHexBuf, AT_TERMINATOR);
 
         // Wait for confirmation
@@ -300,9 +293,7 @@ bool Nbiot::send (char *pMsg, uint32_t msgSize, time_t timeoutSeconds)
             response = waitResponse("+SMI:SENT\r\n", timeoutSeconds);
             if (response == AT_RESPONSE_STARTS_AS_EXPECTED)
             {
-                // All done
                 success = true;
-                printf ("HOOOOOOOOOORRRRRRRRRRRRRAAAAAAAAAAAAAA.\r\n");
             }
         }
     }
