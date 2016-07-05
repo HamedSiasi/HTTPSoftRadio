@@ -18,7 +18,9 @@
     }
   ],
   "dependencies": {
-    "mbed-drivers": "u-blox/mbed-drivers#v1.5.1"
+    "mbed-drivers": "u-blox/mbed-drivers#v1.5.1",
+    "unity": "^2.2.0",
+    "utest": "^1.12.2"
   },
   "targetDependencies": {},
   "bin": "./source"

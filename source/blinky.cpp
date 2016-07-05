@@ -18,10 +18,10 @@
 
 #include "mbed-drivers/mbed.h"
 #include "example-mbedos-blinky/HTTPClient.h"
-#include "greentea-client\test_env.h"
+#include "greentea-client/test_env.h"
 //#include "unity/unity.h"
+//#include "utest/utest.h"
 //#define DEBUG
-
 
 
 #ifdef DEBUG
@@ -84,7 +84,6 @@ static bool modem(char *datagram, uint32_t datagramLen){
 	return status;
 }*/
 
-
 static void get(void) {
 	char resultBuffer[128];
 
@@ -139,10 +138,17 @@ static void blinky(void) {
     printf("LED = %d \n\r",led.read());
 }
 
-
 void app_start(int, char**)
 {
+	/*
+	bool result = true;
+	GREENTEA_SETUP(15, "default_auto");
 
+	//TEST_ASSERT_TRUE(true);
+	//TEST_ASSERT_FALSE(false);
+
+	GREENTEA_TESTSUITE_RESULT(result);
+	*/
     //minar::Scheduler::postCallback(blinky).period(minar::milliseconds(2000));
     minar::Scheduler::postCallback(get).period(minar::milliseconds(1000));
 }
