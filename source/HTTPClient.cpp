@@ -512,7 +512,7 @@ HTTPResult HTTPClient::recv(char* buf, size_t minLen, size_t maxLen, size_t* pRe
       break;
     }
   }
-  printf("<-- %s\r\n", pBuf);
+  printf("<-- %s\r\n", buf);
   *pReadLen = readLen;
   return HTTP_OK;
 }
